@@ -1,0 +1,39 @@
+---
+import Base from '../layouts/Base.astro';
+import PostList from '../components/PostList.astro';
+import { SITE, url, publishedPosts, dailyIssues, formatDate } from '../lib/site';
+import { projects } from '../data/projects';
+
+const posts = (await publishedPosts()).slice(0, 8);
+const latestDaily = (await dailyIssues())[0];
+---
+<Base nav="home">
+  <h1 class="page-title">{SITE.title}</h1>
+  <p class="page-lead">{SITE.description}</p>
+
+  {latestDaily && (
+    <p class="notice">
+      今日速递：<a href={url(`/daily/${latestDaily.id}/`)}>{formatDate(latestDaily.data.date)}</a>
+      {latestDaily.data.subtitle && <span> · {latestDaily.data.subtitle}</span>}
+    </p>
+  )}
+
+  <section class="section">
+    <h2>最新文章 <a href={url('/posts/')}>全部 →</a></h2>
+    {posts.length > 0 ? <PostList posts={posts} /> : <p class="page-lead">还没有文章。</p>}
+  </section>
+
+  <section class="section">
+    <h2>在做的东西 <a href={url('/projects/')}>全部 →</a></h2>
+    <div class="cards">
+      {projects.slice(0, 4).map((p) => (
+        <div class="card">
+          <a class="cover-link" href={p.repo} aria-label={`${p.name} 源码`}></a>
+          <h3>{p.name}</h3>
+          <p>{p.summary}</p>
+          <div class="meta"><span>{p.stack}</span><span>{p.year}</span></div>
+        </div>
+      ))}
+    </div>
+  </section>
+</Base>

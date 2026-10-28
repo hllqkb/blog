@@ -1,0 +1,22 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { publishedPosts } from '../../lib/site';
+
+const posts = await publishedPosts();
+const byYear = new Map<number, typeof posts>();
+for (const p of posts) {
+  const y = p.data.date.getFullYear();
+  byYear.set(y, [...(byYear.get(y) ?? []), p]);
+}
+---
+<Base title="文章" nav="posts">
+  <h1 class="page-title">文章</h1>
+  <p class="page-lead">共 {posts.length} 篇。</p>
+  {[...byYear.entries()].map(([year, list]) => (
+    <section>
+      <h2 class="year">{year}</h2>
+      <PostList posts={list} />
+    </section>
+  ))}
+</Base>

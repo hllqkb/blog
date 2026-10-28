@@ -1,0 +1,108 @@
+name: Deploy
+
+on:
+  # main 上推送就构建并发布；PR 只构建检查，不发布
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: ${{ github.event_name == 'pull_request' && format('pages-pr-{0}', github.ref) || 'pages' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Verify output
+        run: |
+          set -x
+          test -s dist/index.html
+          test -s dist/posts/hello-world/index.html
+          test -s dist/rss.xml
+          test -s dist/daily/rss.xml
+          test -s dist/sitemap-index.xml
+          test -s dist/llms.txt
+          test -s dist/robots.txt
+          test -s dist/404.html
+          grep -q 'LXGW WenKai' dist/_astro/*.css
+          grep -q 'href="/blog/posts/' dist/index.html
+
+      - name: Check site size
+        # GitHub Pages 站点上限 1GB
+        run: |
+          size_mb=$(du -sm dist | cut -f1)
+          echo "dist is ${size_mb} MB"
+          if [ "$size_mb" -gt 950 ]; then echo "::error::dist ${size_mb} MB，接近 1GB 上限"; exit 1; fi
+          if [ "$size_mb" -gt 800 ]; then echo "::warning::dist ${size_mb} MB，超过 800MB，考虑压缩或清理图片"; fi
+
+      - name: Dry-run image URL rewrite
+        run: |
+          check="$RUNNER_TEMP/site-check"
+          cp -R dist "$check"
+          python3 .github/scripts/rewrite_image_urls.py "$check" https://img.example.test https://hllqkb.github.io /blog
+          if grep -rEl --include='*.html' '(^|[^A-Za-z0-9_.:/])/blog/images/posts/' "$check"; then
+            echo "::error::rewrite left local image paths"; exit 1
+          fi
+
+      # 仓库变量 IMAGE_CDN_BASE（如 https://img.hllqk.cn）为空时跳过，图片仍由 Pages 提供
+      - name: Publish post images to R2
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.IMAGE_CDN_BASE != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # AWS CLI 2.23+ 默认附带的校验和 R2 不支持
+          AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+          AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          aws --version
+          aws s3 sync public/images/posts "s3://${R2_BUCKET}/posts" \
+            --endpoint-url "https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --size-only --exclude ".gitkeep" \
+            --cache-control "public, max-age=31536000, immutable"
+
+      - name: Point post images at R2
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request' && vars.IMAGE_CDN_BASE != ''
+        run: python3 .github/scripts/rewrite_image_urls.py dist "${{ vars.IMAGE_CDN_BASE }}" https://hllqkb.github.io /blog
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

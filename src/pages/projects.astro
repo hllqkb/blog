@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/Base.astro';
+import { projects } from '../data/projects';
+---
+<Base title="项目" nav="projects">
+  <h1 class="page-title">项目</h1>
+  <p class="page-lead">自己做的工具和练手项目，点卡片看源码。</p>
+  <div class="cards">
+    {projects.map((p) => (
+      <div class="card">
+        <a class="cover-link" href={p.repo} aria-label={`${p.name} 源码`}></a>
+        <h3>{p.name}</h3>
+        <p>{p.summary}</p>
+        <div class="meta">
+          <span>{p.stack} · {p.year}</span>
+          {p.note && <a href={p.note} style="position:relative;z-index:1">制作手记 →</a>}
+        </div>
+      </div>
+    ))}
+  </div>
+</Base>

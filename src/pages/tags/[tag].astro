@@ -1,0 +1,21 @@
+---
+import Base from '../../layouts/Base.astro';
+import PostList from '../../components/PostList.astro';
+import { publishedPosts } from '../../lib/site';
+
+export async function getStaticPaths() {
+  const posts = await publishedPosts();
+  const tags = [...new Set(posts.flatMap((p) => p.data.tags))];
+  return tags.map((tag) => ({
+    params: { tag },
+    props: { tag, posts: posts.filter((p) => p.data.tags.includes(tag)) },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+<Base title={`标签：${tag}`} nav="tags">
+  <h1 class="page-title">「{tag}」</h1>
+  <p class="page-lead">{posts.length} 篇</p>
+  <PostList posts={posts} />
+</Base>

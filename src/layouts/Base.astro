@@ -1,0 +1,64 @@
+---
+import 'lxgw-wenkai-webfont/lxgwwenkai-regular.css';
+import 'lxgw-wenkai-webfont/lxgwwenkai-bold.css';
+import '../styles/global.css';
+import { SITE, url } from '../lib/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+  canonical?: string;
+  nav?: 'home' | 'posts' | 'daily' | 'projects' | 'tags' | 'about';
+}
+
+const { title, description = SITE.description, canonical, nav } = Astro.props;
+const fullTitle = title ? `${title} · ${SITE.title}` : SITE.title;
+const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).href;
+const links = [
+  { key: 'posts', href: url('/posts/'), label: '文章' },
+  { key: 'daily', href: url('/daily/'), label: '速递' },
+  { key: 'projects', href: url('/projects/'), label: '项目' },
+  { key: 'tags', href: url('/tags/'), label: '标签' },
+  { key: 'about', href: url('/about/'), label: '关于' },
+];
+---
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <meta name="author" content={SITE.author} />
+    <link rel="canonical" href={canonicalUrl} />
+    <link rel="icon" type="image/svg+xml" href={url('/favicon.svg')} />
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.title} · 文章`} href={new URL(url('/rss.xml'), Astro.site)} />
+    <link rel="alternate" type="application/rss+xml" title={`${SITE.title} · 每日速递`} href={new URL(url('/daily/rss.xml'), Astro.site)} />
+    <link rel="sitemap" href={url('/sitemap-index.xml')} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:type" content="website" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap">
+        <a class="brand" href={url('/')} aria-current={nav === 'home' ? 'page' : undefined}>{SITE.title}</a>
+        <nav class="nav" aria-label="主导航">
+          {links.map((l) => <a href={l.href} aria-current={nav === l.key ? 'page' : undefined}>{l.label}</a>)}
+        </nav>
+      </div>
+    </header>
+    <main class="wrap">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap">
+        <span>© {new Date().getFullYear()} {SITE.author}</span>
+        <span>
+          <a href={url('/rss.xml')}>RSS</a> · <a href={SITE.github}>GitHub</a> · <a href={url('/llms.txt')}>llms.txt</a>
+        </span>
+      </div>
+    </footer>
+  </body>
+</html>

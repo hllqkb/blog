@@ -1,0 +1,20 @@
+---
+import Base from '../../layouts/Base.astro';
+import { dailyIssues, url, formatDate } from '../../lib/site';
+
+const issues = await dailyIssues();
+---
+<Base title="每日速递" nav="daily" description="搜索、推荐、3D 生成和 Agent 方向的每日动态，AI 整理、人工过目。">
+  <h1 class="page-title">每日速递</h1>
+  <p class="page-lead">搜索、推荐、3D 生成和 Agent 方向的每日动态，AI 整理、人工过目，以原文链接为准。<a href={url('/daily/rss.xml')}>订阅</a></p>
+  {issues.length === 0 ? <p class="notice">还没有内容。</p> : (
+    <ul class="post-list">
+      {issues.map((d) => (
+        <li>
+          <a href={url(`/daily/${d.id}/`)}>{formatDate(d.data.date)}</a>
+          {d.data.subtitle && <p>{d.data.subtitle}</p>}
+        </li>
+      ))}
+    </ul>
+  )}
+</Base>

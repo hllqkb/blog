@@ -1,0 +1,12 @@
+---
+import Base from '../layouts/Base.astro';
+import { SITE, url } from '../lib/site';
+---
+<Base title="关于" nav="about">
+  <h1 class="page-title">关于</h1>
+  <div class="prose">
+    <p>我是{SITE.author}，软件工程在读，正在做后端开发实习，平时喜欢做些小工具。</p>
+    <p>这里写三类东西：做项目时的记录和踩坑、工作和学习里想明白的事、生活随笔。另有一个 <a href={url('/daily/')}>每日速递</a> 栏目，整理搜索、推荐、3D 生成和 Agent 方向的公开动态。</p>
+    <p>订阅：<a href={url('/rss.xml')}>文章 RSS</a> · <a href={url('/daily/rss.xml')}>速递 RSS</a>。代码在 <a href={SITE.github}>GitHub</a>。</p>
+  </div>
+</Base>
